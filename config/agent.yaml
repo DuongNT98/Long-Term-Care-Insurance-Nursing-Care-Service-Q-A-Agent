@@ -1,0 +1,47 @@
+# Agent Manifest — AgentRegistry entry point
+# AgentRegistry (mediator/registry/agent_registry.py) reads every key below at
+# ROOT level — do NOT nest keys under an `agent:` block. That nested shape is
+# invisible to the registry (falls back to defaults / KeyErrors); see the
+# framework's manifest schema documentation for the full contract.
+id: "HCR-C2-054"
+name: "Long-Term Care Insurance & Nursing Care Service Q&A Agent"
+namespace: "hcr"
+version: "0.1.0"
+enabled: true
+category: "Cat 2"
+# Static generation contract. The sole LLM touchpoint (CareContextExtractNode's
+# free-text care_level normalization) is an optional enhancement over an
+# existing deterministic baseline — any failure degrades to the raw free-text
+# value, never raises, never blocks a response.
+generation_mode: "llm"
+industry: "HCR"
+
+# Opaque compatibility metadata. It is not an inheritance selector or gate input.
+base_type: "VectorRAGAgent"
+
+# Entry point — single dotted import path (module.Class), NOT split module:/class:.
+# AgentRegistry does `manifest["class"].rsplit(".", 1)` to get (module, class_name).
+class: "src.graph.graph.HcrLtcQaGraph"
+
+# Security
+required_trust_level: "VERIFIED_EXTERNAL"
+
+# Compile-time gates (AgentRegistry._compile_and_cache) — declare every secret/extra
+# actually used, or the agent loads with those checks silently disabled.
+# AZURE_OPENAI_API_KEY / AZURE_OPENAI_ENDPOINT / AZURE_OPENAI_DEPLOYMENT are
+# deliberately NOT listed here, mirroring the ANTHROPIC_API_KEY precedent
+# elsewhere in this manifest shape: requires.secrets is enforced via
+# require_at_compile() (hard-fail if absent) at AgentRegistry compile time,
+# but CareContextExtractNode reads them via ctx.secrets.require() inside a
+# try/except that degrades gracefully — listing them here would make every
+# registry-mediated compile 503 whenever the Azure key isn't configured,
+# the opposite of the graceful-degrade design.
+requires:
+  secrets:
+    - "INVOKE_AUTH_TOKEN"  # optional standalone/STG entry-point Bearer auth (src/api/server.py)
+  extras: ["openai"]  # AzureOpenAIClient wraps langchain_openai.ChatOpenAI
+
+# generation_mode is deployment identity, not a tunable provider setting. Runtime parameters
+# (max_retry, timeout_s, hitl, memory_enabled, ...) live in
+# config/config.yaml — AgentRegistry loads that file separately and passes it
+# as Graph(config=...). Do NOT put them here.

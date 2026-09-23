@@ -1,0 +1,46 @@
+[project]
+name = "hcr-c2-054"
+version = "0.1.0"
+description = "Long-Term Care Insurance & Nursing Care Service Q&A Agent — AgentCore Template"
+requires-python = ">=3.11"
+# The framework (agenticstar-agentcore) is NOT a public-PyPI dependency; it is
+# provided by CI per repo arm — a local on-PYTHONPATH stub for early-era repos,
+# or installed from the package registry for wheel-era repos (see the dual-mode
+# test job in the pipeline config). Pinning it here would make `pip install -e .`
+# fail because it is not resolvable from the default index.
+dependencies = [
+    "agenticstar-agentcore[marketplace,openai]==1.0.3",]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==9.0.3",
+    "pytest-cov==5.0.0",
+    "pytest-asyncio==1.4.0",
+    "ruff==0.4.4",
+    "mypy==1.10.0",
+]
+
+[build-system]
+requires = ["setuptools==68.2.2"]
+build-backend = "setuptools.build_meta"
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+
+# The installed agenticstar-agentcore SDK ships no py.typed marker (PEP 561),
+# so every framework.*/shared.* import is untyped from mypy's point of view —
+# this cascades into "subclassing Any" for every node/graph class that
+# inherits from an SDK base. Both overrides are scoped to the SDK-shaped
+# unknowns and do not relax strict mode for anything this repo controls.
+[[tool.mypy.overrides]]
+module = ["framework.*", "shared.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "src.*"
+disallow_subclassing_any = false
